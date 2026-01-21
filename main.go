@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os/exec"
 
@@ -21,7 +22,9 @@ func ToolGeneric(ctx context.Context, req *mcp.CallToolRequest, input Input) (*m
 	if len(input.Code) == 0 {
 		return &mcp.CallToolResult{IsError: true}, Output{Result: ""}, errors.New("eval expression can't be empty")
 	}
-	cmd := exec.Command("emacsclient", "--eval", input.Code)
+
+	expression := fmt.Sprintf(`(my/mcp-safe-eval %q)`, input.Code)
+	cmd := exec.Command("emacsclient", "--eval", expression)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return &mcp.CallToolResult{IsError: true}, Output{Result: string(output)}, err

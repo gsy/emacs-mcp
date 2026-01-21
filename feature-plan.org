@@ -1,0 +1,21 @@
+* Emacs MCP Integration Roadmap
+
+** Phase 1: Core Integration
+
+- [x] Implement the basic MCP server in Go.
+- [] Define the initial set of tools to be exposed to the MCP client.
+- [x] Write unit and integration tests for the core functionality.
+
+** Phase 2: Feature Expansion
+
+- [ ] Add support for MCP resources.
+- [ ] Implement `list_resources` and `read_resource`.
+- [ ] Explore advanced features like file watching and notifications.
+- [ ] Add more tools to the server.
+
+** Phase 3: User Experience and Polish
+
+- [ ] Create a user-friendly interface in Emacs for interacting with the MCP server.
+- [ ] Implement better error handling and reporting.
+- [ ] Document the available tools and resources.
+- [ ] Gather user feedback and iterate on the features.

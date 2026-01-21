@@ -2,46 +2,39 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"log"
 	"os/exec"
 
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+type Input struct {
+	Code string `json:"code" jsonschema:"The code to execute in the running Emacs sesssion"`
+}
+
+type Output struct {
+	Result string `json:"result" jsonschema:"The execution result"`
+}
+
+func ToolGeneric(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, Output, error) {
+	if len(input.Code) == 0 {
+		return &mcp.CallToolResult{IsError: true}, Output{Result: ""}, errors.New("eval expression can't be empty")
+	}
+	cmd := exec.Command("emacsclient", "--eval", input.Code)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return &mcp.CallToolResult{IsError: true}, Output{Result: string(output)}, err
+	}
+	return &mcp.CallToolResult{IsError: false}, Output{Result: string(output)}, nil
+}
+
 func main() {
-	s := server.NewMCPServer(
-		"Emacs-Bridge",
-		"1.0.0",
-		server.WithToolCapabilities(false),
-		server.WithRecovery())
+	server := mcp.NewServer(&mcp.Implementation{Name: "emacs", Version: "v1.0.0"}, nil)
+	mcp.AddTool(server,
+		&mcp.Tool{Name: "eval_lisp", Description: "Execute any Elisp command in the running Emacs session"}, ToolGeneric)
 
-	toolInsertCode := mcp.NewTool("insert_code",
-		mcp.WithDescription("Insert code into the active Emacs buffer"),
-		mcp.WithString("content",
-			mcp.Required(),
-			mcp.Description("The code to insert"),
-		),
-	)
-
-	// This tool wraps the 'emacsclient' command
-	s.AddTool(toolInsertCode, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		content, err := request.RequireString("content")
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		// Run emacsclient to call our Lisp function
-		cmd := exec.Command("emacsclient", "--eval",
-			"(my/ai-insert-at-point \""+content+"\")")
-
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			return nil, err
-		}
-		return mcp.NewToolResultText(string(output)), nil
-	})
-
-	if err := server.ServeStdio(s); err != nil {
-		fmt.Printf("Server error: %v\n", err)
+	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+		log.Fatal(err)
 	}
 }
